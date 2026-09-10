@@ -12,6 +12,7 @@
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
 <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/cnchar/cnchar.min.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -23,6 +24,10 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 
   header {
@@ -30,25 +35,15 @@
     background: linear-gradient(135deg, #8b1a1a, #c0392b);
     color: #fff;
     text-align: center;
-    padding: 24px 16px;
+    padding: 18px 16px;
     box-shadow: 0 2px 12px rgba(0,0,0,0.15);
   }
 
-  header h1 {
-    font-size: 28px;
-    font-weight: 700;
-    letter-spacing: 6px;
-  }
-
-  header p {
-    margin-top: 6px;
-    font-size: 14px;
-    opacity: 0.85;
-    letter-spacing: 2px;
-  }
+  header h1 { font-size: 24px; font-weight: 700; letter-spacing: 6px; }
+  header p { margin-top: 4px; font-size: 13px; opacity: 0.85; letter-spacing: 2px; }
 
   .input-section {
-    margin-top: 28px;
+    margin-top: 16px;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -73,79 +68,70 @@
     box-shadow: 0 0 0 3px rgba(192,57,43,0.15);
   }
 
+  .pinyin-display {
+    margin-top: 6px;
+    font-size: 26px;
+    color: #c0392b;
+    font-weight: 600;
+    letter-spacing: 2px;
+    min-height: 34px;
+  }
+
   .btn {
-    font-size: 16px;
-    padding: 10px 22px;
+    font-size: 14px;
+    padding: 8px 16px;
     border: none;
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s;
     font-weight: 600;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
+    -webkit-user-select: none;
+    user-select: none;
   }
 
-  .btn-primary {
-    background: #c0392b;
-    color: #fff;
-  }
+  .btn:active { transform: scale(0.96); }
+  .btn:disabled { opacity: 0.4; cursor: default; transform: none; }
 
+  .btn-primary { background: #c0392b; color: #fff; }
   .btn-primary:hover { background: #8b1a1a; }
 
-  .btn-secondary {
+  .btn-secondary { background: #fff; color: #c0392b; border: 2px solid #c0392b; }
+  .btn-secondary:hover { background: #fce4e4; }
+
+  .btn-step {
     background: #fff;
     color: #c0392b;
     border: 2px solid #c0392b;
-  }
-
-  .btn-secondary:hover { background: #fce4e4; }
-
-  .controls {
-    margin-top: 16px;
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  .speed-control {
-    margin-top: 12px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    font-size: 20px;
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    color: #666;
-  }
-
-  .speed-control input[type="range"] {
-    width: 140px;
-    accent-color: #c0392b;
-  }
-
-  .writer-area {
-    margin-top: 24px;
-    display: flex;
-    gap: 24px;
-    flex-wrap: wrap;
     justify-content: center;
+    border-radius: 50%;
+  }
+  .btn-step:hover { background: #fce4e4; }
+
+  /* Main content: writer + sidebar */
+  .main-content {
+    margin-top: 12px;
+    display: flex;
+    gap: 20px;
     align-items: flex-start;
+    justify-content: center;
+    width: 100%;
+    max-width: 800px;
+    padding: 0 16px;
   }
 
-  .writer-card {
-    background: #fffdf7;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 2px 16px rgba(0,0,0,0.08);
-    text-align: center;
+  .left-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 
-  .writer-card h3 {
-    font-size: 14px;
-    color: #888;
-    margin-bottom: 12px;
-    letter-spacing: 2px;
-  }
-
-  /* 田字格外框 */
   .writer-wrapper {
     position: relative;
     width: 300px;
@@ -156,34 +142,24 @@
     overflow: hidden;
   }
 
-  /* HanziWriter 目标 div */
-  .writer-target {
-    position: absolute;
-    top: 0;
-    left: 0;
+  .writer-wrapper svg.main-svg {
     width: 100%;
     height: 100%;
-    z-index: 1;
   }
 
-  /* 田字格覆盖层 — 在汉字上方，但不拦截鼠标 */
-  .grid-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 2;
-    pointer-events: none;
-  }
-
-  .grid-overlay line {
+  .writer-wrapper svg.main-svg line.grid-line {
     stroke: #e0c9a8;
     stroke-width: 1;
+    stroke-dasharray: 6, 4;
   }
 
-  .grid-overlay line.dashed {
-    stroke-dasharray: 6, 4;
+  .writer-wrapper svg.main-svg .stroke-path {
+    fill-opacity: 0;
+    transition: fill-opacity 0.3s ease;
+  }
+
+  .writer-wrapper svg.main-svg .stroke-path.visible {
+    fill-opacity: 1;
   }
 
   .placeholder {
@@ -197,38 +173,113 @@
     font-size: 18px;
     letter-spacing: 4px;
     z-index: 3;
+    pointer-events: none;
   }
 
-  .stroke-list {
-    margin-top: 24px;
-    width: 100%;
-    max-width: 700px;
-    padding: 0 20px;
+  /* Quiz overlay */
+  .quiz-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 5;
+    display: none;
   }
 
-  .stroke-list h3 {
-    font-size: 16px;
-    color: #8b1a1a;
-    margin-bottom: 12px;
-    letter-spacing: 2px;
+  .quiz-overlay .writer-target {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 1;
+  }
+
+  .quiz-overlay .grid-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .quiz-overlay .grid-overlay line {
+    stroke: #e0c9a8;
+    stroke-width: 1;
+    stroke-dasharray: 6, 4;
+  }
+
+  /* Step controls */
+  .step-controls {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .step-display {
+    font-size: 18px;
+    font-weight: 700;
+    color: #c0392b;
+    min-width: 64px;
     text-align: center;
+  }
+
+  /* Mode controls */
+  .mode-controls {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .speed-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #666;
+  }
+
+  .speed-control input[type="range"] {
+    width: 80px;
+    accent-color: #c0392b;
+  }
+
+  /* Right panel: stroke breakdown */
+  .right-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .right-panel h3 {
+    font-size: 14px;
+    color: #8b1a1a;
+    margin-bottom: 8px;
+    letter-spacing: 2px;
   }
 
   .strokes-grid {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 8px;
     justify-content: center;
+    max-width: 220px;
   }
 
   .stroke-item {
     background: #fffdf7;
     border: 2px solid #e0c9a8;
     border-radius: 8px;
-    padding: 6px;
+    padding: 3px;
     text-align: center;
-    transition: all 0.3s;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-user-select: none;
+    user-select: none;
   }
+
+  .stroke-item:hover { border-color: #c0392b; }
 
   .stroke-item.active {
     border-color: #c0392b;
@@ -236,25 +287,15 @@
   }
 
   .stroke-item .stroke-num {
-    font-size: 12px;
+    font-size: 10px;
     color: #999;
-    margin-bottom: 2px;
+    line-height: 1;
+    margin-bottom: 1px;
   }
 
-  .stroke-info {
-    margin-top: 16px;
-    text-align: center;
-    font-size: 14px;
-    color: #666;
-  }
-
-  .stroke-info span {
-    color: #c0392b;
-    font-weight: 700;
-  }
-
+  /* Char history */
   .char-history {
-    margin-top: 24px;
+    margin-top: 20px;
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
@@ -263,64 +304,65 @@
   }
 
   .char-history-item {
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
     border: 2px solid #d4a574;
     border-radius: 6px;
     background: #fffdf7;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 28px;
+    font-size: 24px;
     cursor: pointer;
     transition: all 0.2s;
+    -webkit-user-select: none;
+    user-select: none;
   }
 
-  .char-history-item:hover {
-    border-color: #c0392b;
-    transform: scale(1.1);
-  }
+  .char-history-item:hover { border-color: #c0392b; transform: scale(1.1); }
+  .char-history-item:active { transform: scale(0.95); }
 
   footer {
     margin-top: auto;
-    padding: 20px;
+    padding: 16px;
     text-align: center;
     font-size: 12px;
     color: #aaa;
   }
 
-  @media (max-width: 600px) {
-    header h1 { font-size: 22px; }
-    header { padding: 16px 12px; }
-    .writer-area { gap: 16px; }
-    .writer-wrapper { width: calc(100vw - 80px); height: calc(100vw - 80px); max-width: 300px; max-height: 300px; }
-    .btn { font-size: 14px; padding: 8px 14px; }
-    .controls { gap: 8px; }
+  @media (max-width: 700px) {
+    header h1 { font-size: 20px; }
+    header { padding: 12px; }
+
+    .main-content {
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .writer-wrapper {
+      width: min(280px, calc(100vw - 48px));
+      height: min(280px, calc(100vw - 48px));
+    }
+
+    .right-panel {
+      width: 100%;
+    }
+
+    .right-panel h3 { margin-bottom: 6px; }
+
+    .strokes-grid {
+      max-width: none;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .btn { font-size: 13px; padding: 6px 12px; }
     .input-section input { font-size: 18px; width: 100px; }
-    .stroke-item .stroke-num { font-size: 11px; }
+    .pinyin-display { font-size: 22px; }
   }
 
-  /* Safe area for notched devices */
-  body {
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
-  }
-
-  /* Disable text selection on touch elements */
-  .writer-wrapper, .btn, .char-history-item {
-    -webkit-user-select: none;
-    user-select: none;
+  .writer-wrapper, .btn, .char-history-item, .stroke-item {
     -webkit-touch-callout: none;
-  }
-
-  /* Touch-friendly active states */
-  .btn:active {
-    transform: scale(0.96);
-  }
-  .char-history-item:active {
-    transform: scale(0.95);
   }
 </style>
 </head>
@@ -336,57 +378,51 @@
   <button class="btn btn-primary" onclick="loadChar()">开始</button>
 </div>
 
-<div class="controls">
-  <button class="btn btn-secondary" onclick="animateStrokeOrder()">逐笔播放</button>
-  <button class="btn btn-secondary" onclick="animateFull()">连续播放</button>
-  <button class="btn btn-secondary" onclick="quizMode()">临摹练习</button>
-  <button class="btn btn-secondary" onclick="resetWriter()">重置</button>
-</div>
+<div class="pinyin-display" id="pinyinDisplay"></div>
 
-<div class="speed-control">
-  <span>速度</span>
-  <input type="range" id="speedSlider" min="0.5" max="3" step="0.25" value="1" />
-  <span id="speedLabel">1x</span>
-</div>
-
-<div class="writer-area" id="writerArea">
-  <div class="writer-card">
-    <h3>笔顺演示</h3>
-    <div class="writer-wrapper">
-      <!-- HanziWriter 目标：独立 div，内容会被 HanziWriter 替换 -->
-      <div class="writer-target" id="mainWriter"></div>
-      <!-- 田字格覆盖层：与 HanziWriter 目标平级，不会被清除 -->
-      <svg class="grid-overlay" viewBox="0 0 300 300" preserveAspectRatio="none">
-        <!-- 十字线 -->
-        <line x1="150" y1="0" x2="150" y2="300" class="dashed"/>
-        <line x1="0" y1="150" x2="300" y2="150" class="dashed"/>
-        <!-- 对角线 -->
-        <line x1="0" y1="0" x2="300" y2="300" class="dashed"/>
-        <line x1="300" y1="0" x2="0" y2="300" class="dashed"/>
+<div class="main-content">
+  <div class="left-panel">
+    <div class="writer-wrapper" id="writerWrapper">
+      <svg class="main-svg" id="mainSvg" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+        <line class="grid-line" x1="150" y1="0" x2="150" y2="300"/>
+        <line class="grid-line" x1="0" y1="150" x2="300" y2="150"/>
+        <line class="grid-line" x1="0" y1="0" x2="300" y2="300"/>
+        <line class="grid-line" x1="300" y1="0" x2="0" y2="300"/>
       </svg>
       <div class="placeholder" id="mainPlaceholder">请输入汉字</div>
+      <div class="quiz-overlay" id="quizOverlay">
+        <div class="writer-target" id="quizWriter"></div>
+        <svg class="grid-overlay" viewBox="0 0 300 300" preserveAspectRatio="none">
+          <line x1="150" y1="0" x2="150" y2="300"/>
+          <line x1="0" y1="150" x2="300" y2="150"/>
+          <line x1="0" y1="0" x2="300" y2="300"/>
+          <line x1="300" y1="0" x2="0" y2="300"/>
+        </svg>
+      </div>
     </div>
-    <div class="stroke-info" id="strokeInfo"></div>
+
+    <div class="step-controls">
+      <button class="btn btn-step" id="prevBtn" onclick="prevStep()" disabled>◀</button>
+      <span class="step-display" id="stepDisplay">-</span>
+      <button class="btn btn-step" id="nextBtn" onclick="nextStep()" disabled>▶</button>
+    </div>
+
+    <div class="mode-controls">
+      <button class="btn btn-secondary" id="playBtn" onclick="toggleAutoPlay()">▶ 播放</button>
+      <div class="speed-control">
+        <span>速度</span>
+        <input type="range" id="speedSlider" min="0.5" max="3" step="0.25" value="1" />
+        <span id="speedLabel">1x</span>
+      </div>
+      <button class="btn btn-secondary" onclick="quizMode()">临摹</button>
+      <button class="btn btn-secondary" onclick="resetWriter()">重置</button>
+    </div>
   </div>
 
-  <div class="writer-card">
-    <h3>完整字形</h3>
-    <div class="writer-wrapper">
-      <div class="writer-target" id="staticWriter"></div>
-      <svg class="grid-overlay" viewBox="0 0 300 300" preserveAspectRatio="none">
-        <line x1="150" y1="0" x2="150" y2="300" class="dashed"/>
-        <line x1="0" y1="150" x2="300" y2="150" class="dashed"/>
-        <line x1="0" y1="0" x2="300" y2="300" class="dashed"/>
-        <line x1="300" y1="0" x2="0" y2="300" class="dashed"/>
-      </svg>
-      <div class="placeholder" id="staticPlaceholder">完整字形</div>
-    </div>
+  <div class="right-panel" id="strokeBreakdown" style="display:none;">
+    <h3>逐笔分解</h3>
+    <div class="strokes-grid" id="strokesGrid"></div>
   </div>
-</div>
-
-<div class="stroke-list" id="strokeList" style="display:none;">
-  <h3>逐笔分解</h3>
-  <div class="strokes-grid" id="strokesGrid"></div>
 </div>
 
 <div class="char-history" id="charHistory"></div>
@@ -395,11 +431,19 @@
 
 <script>
 const SIZE = 300;
-let mainWriter = null;
-let staticWriter = null;
+const PAD = 20;
+const DRAW_SIZE = SIZE - PAD * 2;
+const ORIG_SIZE = 1024;
+const SCALE = DRAW_SIZE / ORIG_SIZE;
+
 let currentChar = '';
 let strokeData = null;
-let isAnimating = false;
+let currentStep = -1;
+let totalStrokes = 0;
+let isAutoPlaying = false;
+let autoPlayTimer = null;
+let quizWriter = null;
+let isQuizMode = false;
 const history = [];
 
 const speedSlider = document.getElementById('speedSlider');
@@ -408,55 +452,280 @@ speedSlider.addEventListener('input', () => {
   speedLabel.textContent = speedSlider.value + 'x';
 });
 
-function getSpeed() {
-  return parseFloat(speedSlider.value);
-}
+function getSpeed() { return parseFloat(speedSlider.value); }
+function getDelay() { return Math.round(800 / getSpeed()); }
 
-function getDelay() {
-  return Math.round(800 / getSpeed());
-}
-
-function recreateTarget(parentWrapper, targetId) {
-  // Remove old target div (HanziWriter replaced its content with SVG)
-  const old = document.getElementById(targetId);
-  if (old) old.remove();
-  // Create fresh target div
-  const fresh = document.createElement('div');
-  fresh.className = 'writer-target';
-  fresh.id = targetId;
-  // Insert before the grid overlay (first child)
-  parentWrapper.insertBefore(fresh, parentWrapper.firstChild);
-  return fresh;
+function getPinyin(char) {
+  try {
+    if (typeof cnchar !== 'undefined' && cnchar.spell) {
+      return cnchar.spell(char, 'tone', 'low');
+    }
+  } catch(e) {}
+  return '';
 }
 
 function loadChar() {
   const input = document.getElementById('charInput').value.trim();
   if (!input) return;
   const char = input[0];
-  if (char === currentChar) return;
+  if (!/[\u4e00-\u9fff]/.test(char)) return;
 
+  // Same character: restart animation
+  if (char === currentChar && strokeData) {
+    stopAutoPlay();
+    exitQuizMode();
+    currentStep = -1;
+    clearMainSvg();
+    updateStepDisplay();
+    startAutoPlay();
+    return;
+  }
+
+  // New character
+  stopAutoPlay();
+  exitQuizMode();
   currentChar = char;
+  currentStep = -1;
+  strokeData = null;
+  totalStrokes = 0;
+
   document.getElementById('mainPlaceholder').style.display = 'none';
-  document.getElementById('staticPlaceholder').style.display = 'none';
-  document.getElementById('strokeInfo').textContent = '';
-  document.getElementById('strokeList').style.display = 'none';
+  document.getElementById('pinyinDisplay').textContent = getPinyin(char);
+  clearMainSvg();
+  updateStepDisplay();
+  document.getElementById('strokeBreakdown').style.display = 'none';
   document.getElementById('strokesGrid').innerHTML = '';
-  isAnimating = false;
 
-  // Recreate target divs so HanziWriter gets a clean container
-  const mainWrapper = document.getElementById('mainWriter').parentElement;
-  const staticWrapper = document.getElementById('staticWriter').parentElement;
-  recreateTarget(mainWrapper, 'mainWriter');
-  recreateTarget(staticWrapper, 'staticWriter');
+  HanziWriter.loadCharacterData(char).then(data => {
+    strokeData = data;
+    totalStrokes = data.strokes.length;
+    showStrokeBreakdown(data);
+    updateStepDisplay();
+    startAutoPlay();
+  }).catch(() => {
+    document.getElementById('pinyinDisplay').textContent = '未找到笔顺数据';
+    strokeData = null;
+  });
 
-  // Main writer (for animation)
-  mainWriter = HanziWriter.create('mainWriter', char, {
+  if (!history.includes(char)) {
+    history.push(char);
+    renderHistory();
+  }
+}
+
+function clearMainSvg() {
+  const svg = document.getElementById('mainSvg');
+  while (svg.childNodes.length > 4) {
+    svg.removeChild(svg.lastChild);
+  }
+}
+
+function renderMainWriter(animate) {
+  clearMainSvg();
+  if (!strokeData || currentStep < 0) return;
+
+  const svg = document.getElementById('mainSvg');
+  const transform = 'translate(' + PAD + ',' + PAD + ') scale(' + SCALE + ') translate(0,' + ORIG_SIZE + ') scale(1,-1)';
+
+  for (let i = 0; i <= currentStep && i < totalStrokes; i++) {
+    const isCurrent = (i === currentStep);
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', strokeData.strokes[i]);
+    path.setAttribute('class', 'stroke-path');
+    path.setAttribute('transform', transform);
+    path.setAttribute('fill', isCurrent ? '#c0392b' : '#2c2c2c');
+    svg.appendChild(path);
+
+    if (isCurrent && animate) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          path.classList.add('visible');
+        });
+      });
+    } else {
+      path.classList.add('visible');
+    }
+  }
+}
+
+function renderComplete() {
+  clearMainSvg();
+  if (!strokeData) return;
+  const svg = document.getElementById('mainSvg');
+  const transform = 'translate(' + PAD + ',' + PAD + ') scale(' + SCALE + ') translate(0,' + ORIG_SIZE + ') scale(1,-1)';
+  for (let i = 0; i < totalStrokes; i++) {
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', strokeData.strokes[i]);
+    path.setAttribute('class', 'stroke-path visible');
+    path.setAttribute('transform', transform);
+    path.setAttribute('fill', '#2c2c2c');
+    svg.appendChild(path);
+  }
+}
+
+function nextStep() {
+  if (!strokeData || currentStep >= totalStrokes - 1) return;
+  currentStep++;
+  renderMainWriter(true);
+  highlightStrokeItem(currentStep);
+  updateStepDisplay();
+}
+
+function prevStep() {
+  if (currentStep < 0) return;
+  currentStep--;
+  renderMainWriter(false);
+  highlightStrokeItem(currentStep);
+  updateStepDisplay();
+}
+
+function jumpToStep(step) {
+  if (!strokeData || step < -1 || step >= totalStrokes) return;
+  stopAutoPlay();
+  currentStep = step;
+  renderMainWriter(false);
+  highlightStrokeItem(currentStep);
+  updateStepDisplay();
+}
+
+function startAutoPlay() {
+  if (isAutoPlaying || !strokeData) return;
+  isAutoPlaying = true;
+  updatePlayButton();
+
+  if (currentStep >= totalStrokes - 1) {
+    currentStep = -1;
+    clearMainSvg();
+  }
+
+  autoPlayStep();
+}
+
+function autoPlayStep() {
+  if (!isAutoPlaying) return;
+  if (currentStep >= totalStrokes - 1) {
+    stopAutoPlay();
+    // After last stroke shown, briefly show it in red, then switch to complete
+    setTimeout(() => {
+      renderComplete();
+      highlightStrokeItem(-1);
+    }, Math.round(getDelay() * 0.6));
+    return;
+  }
+  nextStep();
+  autoPlayTimer = setTimeout(autoPlayStep, getDelay());
+}
+
+function stopAutoPlay() {
+  isAutoPlaying = false;
+  if (autoPlayTimer) {
+    clearTimeout(autoPlayTimer);
+    autoPlayTimer = null;
+  }
+  updatePlayButton();
+}
+
+function toggleAutoPlay() {
+  if (isAutoPlaying) {
+    stopAutoPlay();
+  } else {
+    startAutoPlay();
+  }
+}
+
+function updatePlayButton() {
+  const btn = document.getElementById('playBtn');
+  btn.textContent = isAutoPlaying ? '⏸ 暂停' : '▶ 播放';
+}
+
+function updateStepDisplay() {
+  const display = document.getElementById('stepDisplay');
+  if (!strokeData) {
+    display.textContent = '-';
+    document.getElementById('prevBtn').disabled = true;
+    document.getElementById('nextBtn').disabled = true;
+    return;
+  }
+  display.textContent = (currentStep + 1) + ' / ' + totalStrokes;
+  document.getElementById('prevBtn').disabled = (currentStep < 0);
+  document.getElementById('nextBtn').disabled = (currentStep >= totalStrokes - 1);
+}
+
+function showStrokeBreakdown(data) {
+  if (!data || !data.strokes) return;
+  const grid = document.getElementById('strokesGrid');
+  grid.innerHTML = '';
+  document.getElementById('strokeBreakdown').style.display = 'flex';
+
+  const strokes = data.strokes;
+  const MINI_SIZE = 48;
+  const MINI_PAD = 3;
+  const MINI_DRAW = MINI_SIZE - MINI_PAD * 2;
+  const MINI_SCALE = MINI_DRAW / ORIG_SIZE;
+
+  strokes.forEach((_, i) => {
+    const item = document.createElement('div');
+    item.className = 'stroke-item';
+    item.id = 'stroke-item-' + i;
+    item.onclick = () => jumpToStep(i);
+
+    const num = document.createElement('div');
+    num.className = 'stroke-num';
+    num.textContent = (i + 1);
+    item.appendChild(num);
+
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + MINI_SIZE + ' ' + MINI_SIZE);
+    svg.style.cssText = 'width:' + MINI_SIZE + 'px;height:' + MINI_SIZE + 'px;display:block;';
+
+    const cx = MINI_SIZE / 2;
+    svg.innerHTML =
+      '<line x1="' + cx + '" y1="0" x2="' + cx + '" y2="' + MINI_SIZE + '" stroke="#e0c9a8" stroke-width="0.5" stroke-dasharray="3,2"/>'
+      + '<line x1="0" y1="' + cx + '" x2="' + MINI_SIZE + '" y2="' + cx + '" stroke="#e0c9a8" stroke-width="0.5" stroke-dasharray="3,2"/>';
+
+    const miniTransform = 'translate(' + MINI_PAD + ',' + MINI_PAD + ') scale(' + MINI_SCALE + ') translate(0,' + ORIG_SIZE + ') scale(1,-1)';
+    for (let s = 0; s <= i; s++) {
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', strokes[s]);
+      path.setAttribute('transform', miniTransform);
+      path.setAttribute('fill', s === i ? '#c0392b' : '#2c2c2c');
+      svg.appendChild(path);
+    }
+
+    item.appendChild(svg);
+    grid.appendChild(item);
+  });
+}
+
+function highlightStrokeItem(index) {
+  document.querySelectorAll('.stroke-item').forEach(el => el.classList.remove('active'));
+  if (index >= 0) {
+    const item = document.getElementById('stroke-item-' + index);
+    if (item) item.classList.add('active');
+  }
+}
+
+function quizMode() {
+  if (!currentChar || !strokeData) return;
+  stopAutoPlay();
+  isQuizMode = true;
+
+  const overlay = document.getElementById('quizOverlay');
+  overlay.style.display = 'block';
+  document.getElementById('mainPlaceholder').style.display = 'none';
+
+  const old = document.getElementById('quizWriter');
+  if (old) old.remove();
+  const fresh = document.createElement('div');
+  fresh.className = 'writer-target';
+  fresh.id = 'quizWriter';
+  overlay.insertBefore(fresh, overlay.firstChild);
+
+  quizWriter = HanziWriter.create('quizWriter', currentChar, {
     width: SIZE,
     height: SIZE,
-    padding: 20,
+    padding: PAD,
     showOutline: true,
-    strokeAnimationSpeed: getSpeed(),
-    delayBetweenStrokes: getDelay(),
     strokeColor: '#2c2c2c',
     outlineColor: '#ddd',
     radicalColor: '#c0392b',
@@ -466,29 +735,36 @@ function loadChar() {
     highlightOnComplete: true,
   });
 
-  // Static writer (full character)
-  staticWriter = HanziWriter.create('staticWriter', char, {
-    width: SIZE,
-    height: SIZE,
-    padding: 20,
-    showOutline: false,
-    strokeColor: '#2c2c2c',
-    showCharacter: true,
+  quizWriter.quiz({
+    onComplete: () => {
+      setTimeout(() => exitQuizMode(), 1500);
+    }
   });
+}
 
-  // Load stroke data for breakdown
-  HanziWriter.loadCharacterData(char).then(data => {
-    strokeData = data;
-    showStrokeBreakdown(data);
-  }).catch(() => {
-    document.getElementById('strokeInfo').textContent = '未找到该汉字的笔顺数据';
-  });
-
-  // Add to history
-  if (!history.includes(char)) {
-    history.push(char);
-    renderHistory();
+function exitQuizMode() {
+  isQuizMode = false;
+  document.getElementById('quizOverlay').style.display = 'none';
+  if (quizWriter) {
+    try { quizWriter.cancelQuiz(); } catch(e) {}
+    quizWriter = null;
   }
+}
+
+function resetWriter() {
+  stopAutoPlay();
+  exitQuizMode();
+  if (!currentChar || !strokeData) {
+    currentStep = -1;
+    clearMainSvg();
+    highlightStrokeItem(-1);
+    updateStepDisplay();
+    return;
+  }
+  currentStep = totalStrokes - 1;
+  renderComplete();
+  highlightStrokeItem(-1);
+  updateStepDisplay();
 }
 
 function renderHistory() {
@@ -506,151 +782,10 @@ function renderHistory() {
   });
 }
 
-function showStrokeBreakdown(data) {
-  if (!data || !data.strokes) return;
-  const grid = document.getElementById('strokesGrid');
-  grid.innerHTML = '';
-  document.getElementById('strokeList').style.display = 'block';
-
-  const strokes = data.strokes;
-  // Make Me a Hanzi uses 1024x1024 coordinate space
-  const ORIG_SIZE = 1024;
-  const MINI_SIZE = 60;
-  const PAD = 4;
-  const DRAW_SIZE = MINI_SIZE - PAD * 2;
-  const SCALE = DRAW_SIZE / ORIG_SIZE;
-
-  strokes.forEach((strokePath, i) => {
-    const item = document.createElement('div');
-    item.className = 'stroke-item';
-    item.id = 'stroke-item-' + i;
-
-    const num = document.createElement('div');
-    num.className = 'stroke-num';
-    num.textContent = '第' + (i + 1) + '笔';
-    item.appendChild(num);
-
-    // Build SVG showing all strokes up to this point
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('viewBox', '0 0 ' + MINI_SIZE + ' ' + MINI_SIZE);
-    svg.style.cssText = 'width:60px;height:60px;border:2px solid #e0c9a8;border-radius:4px;background:#fff;display:block;';
-
-    // Mini grid lines
-    svg.innerHTML =
-      '<line x1="30" y1="0" x2="30" y2="60" stroke="#e0c9a8" stroke-width="0.5" stroke-dasharray="3,2"/>'
-      + '<line x1="0" y1="30" x2="60" y2="30" stroke="#e0c9a8" stroke-width="0.5" stroke-dasharray="3,2"/>';
-
-    // Draw strokes 0..i, current stroke in red, previous in black
-    // Raw paths use Y-up coords; flip Y to match SVG's Y-down
-    for (let s = 0; s <= i; s++) {
-      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('d', strokes[s]);
-      path.setAttribute('transform',
-        'translate(' + PAD + ',' + PAD + ') scale(' + SCALE + ') translate(0,' + ORIG_SIZE + ') scale(1,-1)');
-      path.setAttribute('fill', s === i ? '#c0392b' : '#2c2c2c');
-      svg.appendChild(path);
-    }
-
-    item.appendChild(svg);
-    grid.appendChild(item);
-  });
-
-  document.getElementById('strokeInfo').innerHTML =
-    '共 <span>' + strokes.length + '</span> 笔';
-}
-
-function animateStrokeOrder() {
-  if (!mainWriter || !strokeData) return;
-  isAnimating = true;
-  const totalStrokes = strokeData.strokes.length;
-  let currentStroke = 0;
-
-  // Reset first
-  mainWriter.hideCharacter({ duration: 0 });
-  mainWriter.showOutline({ duration: 0 });
-
-  function animateNext() {
-    if (!isAnimating || currentStroke >= totalStrokes) {
-      isAnimating = false;
-      return;
-    }
-
-    // Highlight current stroke item
-    document.querySelectorAll('.stroke-item').forEach(el => el.classList.remove('active'));
-    const item = document.getElementById('stroke-item-' + currentStroke);
-    if (item) item.classList.add('active');
-
-    document.getElementById('strokeInfo').innerHTML =
-      '正在书写第 <span>' + (currentStroke + 1) + '</span> / <span>' + totalStrokes + '</span> 笔';
-
-    mainWriter.animateStroke(currentStroke, {
-      onComplete: () => {
-        currentStroke++;
-        setTimeout(animateNext, Math.round(300 / getSpeed()));
-      }
-    });
-  }
-
-  animateNext();
-}
-
-function animateFull() {
-  if (!mainWriter) return;
-  isAnimating = true;
-  mainWriter.hideCharacter({ duration: 0 });
-  mainWriter.showOutline({ duration: 0 });
-  document.getElementById('strokeInfo').innerHTML = '连续播放中…';
-
-  mainWriter.animateCharacter({
-    onComplete: () => {
-      isAnimating = false;
-      document.getElementById('strokeInfo').innerHTML = '书写完成';
-    }
-  });
-}
-
-function quizMode() {
-  if (!mainWriter) return;
-  isAnimating = false;
-  mainWriter.hideCharacter({ duration: 300 });
-  mainWriter.showOutline({ duration: 300 });
-  document.getElementById('strokeInfo').innerHTML =
-    '临摹模式：请在字格中按笔顺书写';
-
-  mainWriter.quiz({
-    onComplete: (summary) => {
-      document.getElementById('strokeInfo').innerHTML =
-        '完成！总笔数 <span>' + summary.totalMistakes + '</span> 处失误';
-    },
-    onCorrectStroke: (data) => {
-      document.getElementById('strokeInfo').innerHTML =
-        '第 <span>' + (data.strokeNum + 1) + '</span> 笔正确！';
-    },
-    onMistake: (data) => {
-      document.getElementById('strokeInfo').innerHTML =
-        '第 <span>' + (data.strokeNum + 1) + '</span> 笔有误，已失误 <span>' + data.mistakesOnStroke + '</span> 次';
-    }
-  });
-}
-
-function resetWriter() {
-  if (!mainWriter) return;
-  isAnimating = false;
-  mainWriter.showCharacter({ duration: 300 });
-  mainWriter.showOutline({ duration: 300 });
-  document.querySelectorAll('.stroke-item').forEach(el => el.classList.remove('active'));
-  if (strokeData) {
-    document.getElementById('strokeInfo').innerHTML =
-      '共 <span>' + strokeData.strokes.length + '</span> 笔';
-  }
-}
-
-// Enter key support
 document.getElementById('charInput').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') loadChar();
 });
 
-// Auto-load on input if single Chinese character
 document.getElementById('charInput').addEventListener('input', (e) => {
   const val = e.target.value.trim();
   if (val.length === 1 && /[\u4e00-\u9fff]/.test(val)) {
@@ -658,7 +793,6 @@ document.getElementById('charInput').addEventListener('input', (e) => {
   }
 });
 
-// Register Service Worker
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').then(reg => {
     console.log('Service Worker registered', reg.scope);
@@ -667,6 +801,5 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
-
 </body>
 </html>
