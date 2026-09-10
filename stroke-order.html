@@ -292,15 +292,27 @@
   .speed-control {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     font-size: 13px;
     color: #666;
   }
 
-  .speed-control input[type="range"] {
-    width: 80px;
-    accent-color: #c0392b;
+  .speed-btn {
+    padding: 3px 10px;
+    border: 1.5px solid #d4a574;
+    border-radius: 6px;
+    background: #fff;
+    color: #8b5e3c;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    -webkit-user-select: none;
+    user-select: none;
   }
+
+  .speed-btn:hover { background: #fff8f0; }
+  .speed-btn.active { background: #c0392b; color: #fff; border-color: #c0392b; }
 
   /* Right panel: stroke breakdown */
   .right-panel {
@@ -350,34 +362,86 @@
     margin-bottom: 1px;
   }
 
-  /* Char history */
-  .char-history {
-    margin-top: 20px;
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    justify-content: center;
+  /* Char history & favorites */
+  .char-section {
+    margin-top: 16px;
+    width: 100%;
     max-width: 700px;
+    padding: 0 16px;
   }
 
-  .char-history-item {
-    width: 44px;
-    height: 44px;
+  .char-section-title {
+    font-size: 13px;
+    color: #8b5e3c;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: 1px;
+  }
+
+  .char-section-title .icon { font-size: 15px; }
+
+  .char-list {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .char-item {
+    width: 42px;
+    height: 42px;
     border: 2px solid #d4a574;
     border-radius: 6px;
     background: #fffdf7;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
+    font-size: 22px;
     cursor: pointer;
     transition: all 0.2s;
     -webkit-user-select: none;
     user-select: none;
+    position: relative;
   }
 
-  .char-history-item:hover { border-color: #c0392b; transform: scale(1.1); }
-  .char-history-item:active { transform: scale(0.95); }
+  .char-item:hover { border-color: #c0392b; transform: scale(1.08); }
+  .char-item:active { transform: scale(0.95); }
+  .char-item.fav { border-color: #e67e22; background: #fef5e7; }
+
+  .char-item .remove-btn {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #c0392b;
+    color: #fff;
+    font-size: 10px;
+    line-height: 16px;
+    text-align: center;
+    cursor: pointer;
+    display: none;
+  }
+
+  .char-item:hover .remove-btn { display: block; }
+
+  .fav-toggle {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: none;
+    font-size: 22px;
+    cursor: pointer;
+    color: #ccc;
+    transition: color 0.2s, transform 0.2s;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .fav-toggle:hover { transform: scale(1.15); }
+  .fav-toggle.active { color: #e67e22; }
 
   footer {
     margin-top: auto;
@@ -425,9 +489,12 @@
     .pinyin-part { padding: 5px 10px; }
     .pinyin-part-value { font-size: 18px; }
     .pinyin-tone-symbol { font-size: 22px; }
+
+    .char-section { padding: 0 8px; }
+    .char-item { width: 38px; height: 38px; font-size: 20px; }
   }
 
-  .writer-wrapper, .btn, .char-history-item, .stroke-item {
+  .writer-wrapper, .btn, .char-item, .stroke-item {
     -webkit-touch-callout: none;
   }
 </style>
@@ -442,6 +509,7 @@
 <div class="input-section">
   <input type="text" id="charInput" maxlength="1" placeholder="输入汉字" />
   <button class="btn btn-primary" onclick="loadChar()">开始</button>
+  <button class="fav-toggle" id="favToggle" onclick="toggleFav()" title="收藏">★</button>
 </div>
 
 <div class="main-content">
@@ -479,8 +547,9 @@
       <button class="btn btn-secondary" id="playBtn" onclick="toggleAutoPlay()">▶ 播放</button>
       <div class="speed-control">
         <span>速度</span>
-        <input type="range" id="speedSlider" min="0.5" max="3" step="0.25" value="1" />
-        <span id="speedLabel">1x</span>
+        <button class="speed-btn" data-speed="0.5" onclick="setSpeed(0.5,this)">慢</button>
+        <button class="speed-btn active" data-speed="1" onclick="setSpeed(1,this)">中</button>
+        <button class="speed-btn" data-speed="2" onclick="setSpeed(2,this)">快</button>
       </div>
       <button class="btn btn-secondary" onclick="quizMode()">临摹</button>
       <button class="btn btn-secondary" onclick="resetWriter()">重置</button>
@@ -493,7 +562,15 @@
   </div>
 </div>
 
-<div class="char-history" id="charHistory"></div>
+<div class="char-section" id="favSection" style="display:none;">
+    <div class="char-section-title"><span class="icon">★</span>我的收藏</div>
+    <div class="char-list" id="favList"></div>
+  </div>
+
+  <div class="char-section" id="historySection" style="display:none;">
+    <div class="char-section-title"><span class="icon">🕐</span>最近练习</div>
+    <div class="char-list" id="historyList"></div>
+  </div>
 
 <footer>笔顺数据来源：hanzi-writer / Make Me a Hanzi</footer>
 
@@ -512,16 +589,28 @@ let isAutoPlaying = false;
 let autoPlayTimer = null;
 let quizWriter = null;
 let isQuizMode = false;
-const history = [];
+let playSpeed = 1;
 
-const speedSlider = document.getElementById('speedSlider');
-const speedLabel = document.getElementById('speedLabel');
-speedSlider.addEventListener('input', () => {
-  speedLabel.textContent = speedSlider.value + 'x';
-});
+const STORAGE_HISTORY = 'stroke_order_history';
+const STORAGE_FAVS = 'stroke_order_favs';
 
-function getSpeed() { return parseFloat(speedSlider.value); }
-function getDelay() { return Math.round(800 / getSpeed()); }
+function loadFromStorage(key) {
+  try { return JSON.parse(localStorage.getItem(key)) || []; } catch(e) { return []; }
+}
+function saveToStorage(key, data) {
+  try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) {}
+}
+
+let historyList = loadFromStorage(STORAGE_HISTORY);
+let favList = loadFromStorage(STORAGE_FAVS);
+
+function setSpeed(speed, btn) {
+  playSpeed = speed;
+  document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+}
+
+function getDelay() { return Math.round(800 / playSpeed); }
 
 function getPinyin(char) {
   try {
@@ -668,10 +757,13 @@ function loadChar() {
     strokeData = null;
   });
 
-  if (!history.includes(char)) {
-    history.push(char);
-    renderHistory();
+  if (!historyList.includes(char)) {
+    historyList.unshift(char);
+    if (historyList.length > 20) historyList.pop();
+    saveToStorage(STORAGE_HISTORY, historyList);
   }
+  renderCharSections();
+  updateFavToggle();
 }
 
 function clearMainSvg() {
@@ -933,19 +1025,79 @@ function resetWriter() {
   updateStepDisplay();
 }
 
-function renderHistory() {
-  const container = document.getElementById('charHistory');
-  container.innerHTML = '';
-  history.forEach(c => {
-    const div = document.createElement('div');
-    div.className = 'char-history-item';
-    div.textContent = c;
-    div.onclick = () => {
-      document.getElementById('charInput').value = c;
-      loadChar();
-    };
-    container.appendChild(div);
-  });
+function renderCharSections() {
+  // Favorites
+  const favSection = document.getElementById('favSection');
+  const favContainer = document.getElementById('favList');
+  if (favList.length === 0) {
+    favSection.style.display = 'none';
+  } else {
+    favSection.style.display = 'block';
+    favContainer.innerHTML = '';
+    favList.forEach(c => {
+      const div = document.createElement('div');
+      div.className = 'char-item fav';
+      div.textContent = c;
+      div.onclick = () => {
+        document.getElementById('charInput').value = c;
+        loadChar();
+      };
+      const rm = document.createElement('span');
+      rm.className = 'remove-btn';
+      rm.textContent = '×';
+      rm.onclick = (e) => {
+        e.stopPropagation();
+        favList = favList.filter(x => x !== c);
+        saveToStorage(STORAGE_FAVS, favList);
+        renderCharSections();
+        updateFavToggle();
+      };
+      div.appendChild(rm);
+      favContainer.appendChild(div);
+    });
+  }
+
+  // History
+  const histSection = document.getElementById('historySection');
+  const histContainer = document.getElementById('historyList');
+  if (historyList.length === 0) {
+    histSection.style.display = 'none';
+  } else {
+    histSection.style.display = 'block';
+    histContainer.innerHTML = '';
+    historyList.forEach(c => {
+      const div = document.createElement('div');
+      div.className = 'char-item' + (favList.includes(c) ? ' fav' : '');
+      div.textContent = c;
+      div.onclick = () => {
+        document.getElementById('charInput').value = c;
+        loadChar();
+      };
+      histContainer.appendChild(div);
+    });
+  }
+}
+
+function toggleFav() {
+  if (!currentChar) return;
+  const idx = favList.indexOf(currentChar);
+  if (idx >= 0) {
+    favList.splice(idx, 1);
+  } else {
+    favList.unshift(currentChar);
+  }
+  saveToStorage(STORAGE_FAVS, favList);
+  renderCharSections();
+  updateFavToggle();
+}
+
+function updateFavToggle() {
+  const btn = document.getElementById('favToggle');
+  if (currentChar && favList.includes(currentChar)) {
+    btn.classList.add('active');
+  } else {
+    btn.classList.remove('active');
+  }
 }
 
 document.getElementById('charInput').addEventListener('keydown', (e) => {
@@ -958,6 +1110,8 @@ document.getElementById('charInput').addEventListener('input', (e) => {
     loadChar();
   }
 });
+
+renderCharSections();
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').then(reg => {
