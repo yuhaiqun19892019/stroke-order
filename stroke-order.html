@@ -68,13 +68,70 @@
     box-shadow: 0 0 0 3px rgba(192,57,43,0.15);
   }
 
-  .pinyin-display {
-    margin-top: 6px;
-    font-size: 26px;
+  .pinyin-card {
+    margin-bottom: 8px;
+    background: #fffdf7;
+    border: 2px solid #d4a574;
+    border-radius: 12px;
+    padding: 10px 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    display: none;
+    text-align: center;
+    width: 300px;
+  }
+
+  .pinyin-card.show { display: block; }
+
+  .pinyin-full {
+    font-size: 32px;
     color: #c0392b;
-    font-weight: 600;
-    letter-spacing: 2px;
-    min-height: 34px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    font-family: "Georgia", "Times New Roman", serif;
+  }
+
+  .pinyin-parts {
+    margin-top: 8px;
+    display: flex;
+    gap: 0;
+    justify-content: center;
+  }
+
+  .pinyin-part {
+    padding: 6px 14px;
+    text-align: center;
+  }
+
+  .pinyin-part + .pinyin-part {
+    border-left: 1px dashed #d4a574;
+  }
+
+  .pinyin-part-label {
+    font-size: 11px;
+    color: #999;
+    margin-bottom: 2px;
+  }
+
+  .pinyin-part-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: #2c2c2c;
+    font-family: "Georgia", "Times New Roman", serif;
+    min-width: 28px;
+  }
+
+  .pinyin-part-value.sm { font-size: 16px; }
+
+  .pinyin-tone-symbol {
+    font-size: 28px;
+    line-height: 1;
+    color: #c0392b;
+  }
+
+  .pinyin-tone-name {
+    font-size: 12px;
+    color: #c0392b;
+    margin-top: 1px;
   }
 
   .btn {
@@ -344,6 +401,10 @@
       height: min(280px, calc(100vw - 48px));
     }
 
+    .pinyin-card {
+      width: min(280px, calc(100vw - 48px));
+    }
+
     .right-panel {
       width: 100%;
     }
@@ -358,7 +419,12 @@
 
     .btn { font-size: 13px; padding: 6px 12px; }
     .input-section input { font-size: 18px; width: 100px; }
-    .pinyin-display { font-size: 22px; }
+
+    .pinyin-card { padding: 10px 14px; }
+    .pinyin-full { font-size: 26px; }
+    .pinyin-part { padding: 5px 10px; }
+    .pinyin-part-value { font-size: 18px; }
+    .pinyin-tone-symbol { font-size: 22px; }
   }
 
   .writer-wrapper, .btn, .char-history-item, .stroke-item {
@@ -378,10 +444,12 @@
   <button class="btn btn-primary" onclick="loadChar()">开始</button>
 </div>
 
-<div class="pinyin-display" id="pinyinDisplay"></div>
-
 <div class="main-content">
   <div class="left-panel">
+    <div class="pinyin-card" id="pinyinCard">
+      <div class="pinyin-full" id="pinyinFull"></div>
+      <div class="pinyin-parts" id="pinyinParts"></div>
+    </div>
     <div class="writer-wrapper" id="writerWrapper">
       <svg class="main-svg" id="mainSvg" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
         <line class="grid-line" x1="150" y1="0" x2="150" y2="300"/>
@@ -464,6 +532,97 @@ function getPinyin(char) {
   return '';
 }
 
+// Parse pinyin into initial, final, tone
+const INITIALS = ['zh','ch','sh','b','p','m','f','d','t','n','l','g','k','h','j','q','x','r','z','c','s','y','w'];
+const TONE_MAP = {
+  'ā':'1','á':'2','ǎ':'3','à':'4',
+  'ē':'1','é':'2','ě':'3','è':'4',
+  'ī':'1','í':'2','ǐ':'3','ì':'4',
+  'ō':'1','ó':'2','ǒ':'3','ò':'4',
+  'ū':'1','ú':'2','ǔ':'3','ù':'4',
+  'ǖ':'1','ǘ':'2','ǚ':'3','ǜ':'4',
+};
+const TONE_MARKS = { '1':'ˉ', '2':'ˊ', '3':'ˇ', '4':'ˋ' };
+const TONE_NAMES = { '1':'一声', '2':'二声', '3':'三声', '4':'四声', '5':'轻声' };
+const ACCENTED = 'āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ';
+
+function parsePinyin(py) {
+  if (!py) return null;
+  let tone = '5';
+  let base = '';
+  for (let i = 0; i < py.length; i++) {
+    const ch = py[i];
+    const ti = ACCENTED.indexOf(ch);
+    if (ti >= 0) {
+      tone = TONE_MAP[ch];
+      // Map accented vowel back to plain vowel
+      const group = Math.floor(ti / 4);
+      const plain = 'aeiouü'[group];
+      base += plain;
+    } else {
+      base += ch;
+    }
+  }
+  let initial = '';
+  let final = base;
+  for (const ini of INITIALS) {
+    if (base.startsWith(ini)) {
+      initial = ini;
+      final = base.slice(ini.length);
+      break;
+    }
+  }
+  return { initial, final, tone, full: py };
+}
+
+function showPinyinCard(char) {
+  const py = getPinyin(char);
+  const card = document.getElementById('pinyinCard');
+  if (!py) {
+    card.classList.remove('show');
+    return;
+  }
+  const parsed = parsePinyin(py);
+  if (!parsed) {
+    card.classList.remove('show');
+    return;
+  }
+
+  document.getElementById('pinyinFull').textContent = parsed.full;
+
+  const parts = document.getElementById('pinyinParts');
+  parts.innerHTML = '';
+
+  // 声母
+  const iniPart = document.createElement('div');
+  iniPart.className = 'pinyin-part';
+  iniPart.innerHTML =
+    '<div class="pinyin-part-label">声母</div>'
+    + '<div class="pinyin-part-value' + (parsed.initial.length > 1 ? ' sm' : '') + '">' + (parsed.initial || '—') + '</div>';
+  parts.appendChild(iniPart);
+
+  // 韵母
+  const finalPart = document.createElement('div');
+  finalPart.className = 'pinyin-part';
+  finalPart.innerHTML =
+    '<div class="pinyin-part-label">韵母</div>'
+    + '<div class="pinyin-part-value' + (parsed.final.length > 2 ? ' sm' : '') + '">' + parsed.final + '</div>';
+  parts.appendChild(finalPart);
+
+  // 声调
+  const tonePart = document.createElement('div');
+  tonePart.className = 'pinyin-part';
+  const toneSymbol = TONE_MARKS[parsed.tone] || '';
+  const toneName = TONE_NAMES[parsed.tone] || '';
+  tonePart.innerHTML =
+    '<div class="pinyin-part-label">声调</div>'
+    + '<div class="pinyin-tone-symbol">' + (toneSymbol || '·') + '</div>'
+    + '<div class="pinyin-tone-name">' + toneName + '</div>';
+  parts.appendChild(tonePart);
+
+  card.classList.add('show');
+}
+
 function loadChar() {
   const input = document.getElementById('charInput').value.trim();
   if (!input) return;
@@ -490,7 +649,7 @@ function loadChar() {
   totalStrokes = 0;
 
   document.getElementById('mainPlaceholder').style.display = 'none';
-  document.getElementById('pinyinDisplay').textContent = getPinyin(char);
+  showPinyinCard(char);
   clearMainSvg();
   updateStepDisplay();
   document.getElementById('strokeBreakdown').style.display = 'none';
@@ -503,7 +662,9 @@ function loadChar() {
     updateStepDisplay();
     startAutoPlay();
   }).catch(() => {
-    document.getElementById('pinyinDisplay').textContent = '未找到笔顺数据';
+    document.getElementById('pinyinCard').classList.remove('show');
+    document.getElementById('pinyinCard').querySelector('.pinyin-full').textContent = '未找到笔顺数据';
+    document.getElementById('pinyinCard').classList.add('show');
     strokeData = null;
   });
 
@@ -710,6 +871,9 @@ function quizMode() {
   stopAutoPlay();
   isQuizMode = true;
 
+  clearMainSvg();
+  document.getElementById('mainSvg').style.visibility = 'hidden';
+
   const overlay = document.getElementById('quizOverlay');
   overlay.style.display = 'block';
   document.getElementById('mainPlaceholder').style.display = 'none';
@@ -745,6 +909,8 @@ function quizMode() {
 function exitQuizMode() {
   isQuizMode = false;
   document.getElementById('quizOverlay').style.display = 'none';
+  document.getElementById('mainSvg').style.visibility = 'visible';
+  renderMainWriter(false);
   if (quizWriter) {
     try { quizWriter.cancelQuiz(); } catch(e) {}
     quizWriter = null;
