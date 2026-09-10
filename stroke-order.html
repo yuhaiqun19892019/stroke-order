@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>汉字笔顺临摹</title>
+<meta name="description" content="输入任意汉字，逐笔展示笔顺书写顺序，支持临摹练习">
+<meta name="theme-color" content="#c0392b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="笔顺临摹">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: "Noto Serif SC", "SimSun", "STSong", serif;
+    background: #f5f0e8;
+    color: #2c2c2c;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  header {
+    width: 100%;
+    background: linear-gradient(135deg, #8b1a1a, #c0392b);
+    color: #fff;
+    text-align: center;
+    padding: 24px 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  }
+
+  header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 6px;
+  }
+
+  header p {
+    margin-top: 6px;
+    font-size: 14px;
+    opacity: 0.85;
+    letter-spacing: 2px;
+  }
+
+  .input-section {
+    margin-top: 28px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .input-section input {
+    font-size: 22px;
+    padding: 10px 16px;
+    width: 120px;
+    text-align: center;
+    border: 2px solid #c0392b;
+    border-radius: 8px;
+    background: #fffdf7;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .input-section input:focus {
+    border-color: #8b1a1a;
+    box-shadow: 0 0 0 3px rgba(192,57,43,0.15);
+  }
+
+  .btn {
+    font-size: 16px;
+    padding: 10px 22px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+    letter-spacing: 2px;
+  }
+
+  .btn-primary {
+    background: #c0392b;
+    color: #fff;
+  }
+
+  .btn-primary:hover { background: #8b1a1a; }
+
+  .btn-secondary {
+    background: #fff;
+    color: #c0392b;
+    border: 2px solid #c0392b;
+  }
+
+  .btn-secondary:hover { background: #fce4e4; }
+
+  .controls {
+    margin-top: 16px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .speed-control {
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #666;
+  }
+
+  .speed-control input[type="range"] {
+    width: 140px;
+    accent-color: #c0392b;
+  }
+
+  .writer-area {
+    margin-top: 24px;
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+  }
+
+  .writer-card {
+    background: #fffdf7;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+    text-align: center;
+  }
+
+  .writer-card h3 {
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 12px;
+    letter-spacing: 2px;
+  }
+
+  /* 田字格外框 */
+  .writer-wrapper {
+    position: relative;
+    width: 300px;
+    height: 300px;
+    border: 3px solid #d4a574;
+    border-radius: 4px;
+    background: #fff;
+    overflow: hidden;
+  }
+
+  /* HanziWriter 目标 div */
+  .writer-target {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+  }
+
+  /* 田字格覆盖层 — 在汉字上方，但不拦截鼠标 */
+  .grid-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .grid-overlay line {
+    stroke: #e0c9a8;
+    stroke-width: 1;
+  }
+
+  .grid-overlay line.dashed {
+    stroke-dasharray: 6, 4;
+  }
+
+  .placeholder {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ccc;
+    font-size: 18px;
+    letter-spacing: 4px;
+    z-index: 3;
+  }
+
+  .stroke-list {
+    margin-top: 24px;
+    width: 100%;
+    max-width: 700px;
+    padding: 0 20px;
+  }
+
+  .stroke-list h3 {
+    font-size: 16px;
+    color: #8b1a1a;
+    margin-bottom: 12px;
+    letter-spacing: 2px;
+    text-align: center;
+  }
+
+  .strokes-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+  }
+
+  .stroke-item {
+    background: #fffdf7;
+    border: 2px solid #e0c9a8;
+    border-radius: 8px;
+    padding: 6px;
+    text-align: center;
+    transition: all 0.3s;
+  }
+
+  .stroke-item.active {
+    border-color: #c0392b;
+    box-shadow: 0 0 8px rgba(192,57,43,0.3);
+  }
+
+  .stroke-item .stroke-num {
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 2px;
+  }
+
+  .stroke-info {
+    margin-top: 16px;
+    text-align: center;
+    font-size: 14px;
+    color: #666;
+  }
+
+  .stroke-info span {
+    color: #c0392b;
+    font-weight: 700;
+  }
+
+  .char-history {
+    margin-top: 24px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 700px;
+  }
+
+  .char-history-item {
+    width: 48px;
+    height: 48px;
+    border: 2px solid #d4a574;
+    border-radius: 6px;
+    background: #fffdf7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .char-history-item:hover {
+    border-color: #c0392b;
+    transform: scale(1.1);
+  }
+
+  footer {
+    margin-top: auto;
+    padding: 20px;
+    text-align: center;
+    font-size: 12px;
+    color: #aaa;
+  }
+
+  @media (max-width: 600px) {
+    header h1 { font-size: 22px; }
+    header { padding: 16px 12px; }
+    .writer-area { gap: 16px; }
+    .writer-wrapper { width: calc(100vw - 80px); height: calc(100vw - 80px); max-width: 300px; max-height: 300px; }
+    .btn { font-size: 14px; padding: 8px 14px; }
+    .controls { gap: 8px; }
+    .input-section input { font-size: 18px; width: 100px; }
+    .stroke-item .stroke-num { font-size: 11px; }
+  }
+
+  /* Safe area for notched devices */
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Disable text selection on touch elements */
+  .writer-wrapper, .btn, .char-history-item {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  /* Touch-friendly active states */
+  .btn:active {
+    transform: scale(0.96);
+  }
+  .char-history-item:active {
+    transform: scale(0.95);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>汉字笔顺临摹</h1>
+  <p>输入汉字，逐笔展示书写顺序</p>
+</header>
+
+<div class="input-section">
+  <input type="text" id="charInput" maxlength="1" placeholder="输入汉字" />
+  <button class="btn btn-primary" onclick="loadChar()">开始</button>
+</div>
+
+<div class="controls">
+  <button class="btn btn-secondary" onclick="animateStrokeOrder()">逐笔播放</button>
+  <button class="btn btn-secondary" onclick="animateFull()">连续播放</button>
+  <button class="btn btn-secondary" onclick="quizMode()">临摹练习</button>
+  <button class="btn btn-secondary" onclick="resetWriter()">重置</button>
+</div>
+
+<div class="speed-control">
+  <span>速度</span>
+  <input type="range" id="speedSlider" min="0.5" max="3" step="0.25" value="1" />
+  <span id="speedLabel">1x</span>
+</div>
+
+<div class="writer-area" id="writerArea">
+  <div class="writer-card">
+    <h3>笔顺演示</h3>
+    <div class="writer-wrapper">
+      <!-- HanziWriter 目标：独立 div，内容会被 HanziWriter 替换 -->
+      <div class="writer-target" id="mainWriter"></div>
+      <!-- 田字格覆盖层：与 HanziWriter 目标平级，不会被清除 -->
+      <svg class="grid-overlay" viewBox="0 0 300 300" preserveAspectRatio="none">
+        <!-- 十字线 -->
+        <line x1="150" y1="0" x2="150" y2="300" class="dashed"/>
+        <line x1="0" y1="150" x2="300" y2="150" class="dashed"/>
+        <!-- 对角线 -->
+        <line x1="0" y1="0" x2="300" y2="300" class="dashed"/>
+        <line x1="300" y1="0" x2="0" y2="300" class="dashed"/>
+      </svg>
+      <div class="placeholder" id="mainPlaceholder">请输入汉字</div>
+    </div>
+    <div class="stroke-info" id="strokeInfo"></div>
+  </div>
+
+  <div class="writer-card">
+    <h3>完整字形</h3>
+    <div class="writer-wrapper">
+      <div class="writer-target" id="staticWriter"></div>
+      <svg class="grid-overlay" viewBox="0 0 300 300" preserveAspectRatio="none">
+        <line x1="150" y1="0" x2="150" y2="300" class="dashed"/>
+        <line x1="0" y1="150" x2="300" y2="150" class="dashed"/>
+        <line x1="0" y1="0" x2="300" y2="300" class="dashed"/>
+        <line x1="300" y1="0" x2="0" y2="300" class="dashed"/>
+      </svg>
+      <div class="placeholder" id="staticPlaceholder">完整字形</div>
+    </div>
+  </div>
+</div>
+
+<div class="stroke-list" id="strokeList" style="display:none;">
+  <h3>逐笔分解</h3>
+  <div class="strokes-grid" id="strokesGrid"></div>
+</div>
+
+<div class="char-history" id="charHistory"></div>
+
+<footer>笔顺数据来源：hanzi-writer / Make Me a Hanzi</footer>
+
+<script>
+const SIZE = 300;
+let mainWriter = null;
+let staticWriter = null;
+let currentChar = '';
+let strokeData = null;
+let isAnimating = false;
+const history = [];
+
+const speedSlider = document.getElementById('speedSlider');
+const speedLabel = document.getElementById('speedLabel');
+speedSlider.addEventListener('input', () => {
+  speedLabel.textContent = speedSlider.value + 'x';
+});
+
+function getSpeed() {
+  return parseFloat(speedSlider.value);
+}
+
+function getDelay() {
+  return Math.round(800 / getSpeed());
+}
+
+function recreateTarget(parentWrapper, targetId) {
+  // Remove old target div (HanziWriter replaced its content with SVG)
+  const old = document.getElementById(targetId);
+  if (old) old.remove();
+  // Create fresh target div
+  const fresh = document.createElement('div');
+  fresh.className = 'writer-target';
+  fresh.id = targetId;
+  // Insert before the grid overlay (first child)
+  parentWrapper.insertBefore(fresh, parentWrapper.firstChild);
+  return fresh;
+}
+
+function loadChar() {
+  const input = document.getElementById('charInput').value.trim();
+  if (!input) return;
+  const char = input[0];
+  if (char === currentChar) return;
+
+  currentChar = char;
+  document.getElementById('mainPlaceholder').style.display = 'none';
+  document.getElementById('staticPlaceholder').style.display = 'none';
+  document.getElementById('strokeInfo').textContent = '';
+  document.getElementById('strokeList').style.display = 'none';
+  document.getElementById('strokesGrid').innerHTML = '';
+  isAnimating = false;
+
+  // Recreate target divs so HanziWriter gets a clean container
+  const mainWrapper = document.getElementById('mainWriter').parentElement;
+  const staticWrapper = document.getElementById('staticWriter').parentElement;
+  recreateTarget(mainWrapper, 'mainWriter');
+  recreateTarget(staticWrapper, 'staticWriter');
+
+  // Main writer (for animation)
+  mainWriter = HanziWriter.create('mainWriter', char, {
+    width: SIZE,
+    height: SIZE,
+    padding: 20,
+    showOutline: true,
+    strokeAnimationSpeed: getSpeed(),
+    delayBetweenStrokes: getDelay(),
+    strokeColor: '#2c2c2c',
+    outlineColor: '#ddd',
+    radicalColor: '#c0392b',
+    highlightColor: '#e74c3c',
+    drawingColor: '#c0392b',
+    showHintAfterMisses: 3,
+    highlightOnComplete: true,
+  });
+
+  // Static writer (full character)
+  staticWriter = HanziWriter.create('staticWriter', char, {
+    width: SIZE,
+    height: SIZE,
+    padding: 20,
+    showOutline: false,
+    strokeColor: '#2c2c2c',
+    showCharacter: true,
+  });
+
+  // Load stroke data for breakdown
+  HanziWriter.loadCharacterData(char).then(data => {
+    strokeData = data;
+    showStrokeBreakdown(data);
+  }).catch(() => {
+    document.getElementById('strokeInfo').textContent = '未找到该汉字的笔顺数据';
+  });
+
+  // Add to history
+  if (!history.includes(char)) {
+    history.push(char);
+    renderHistory();
+  }
+}
+
+function renderHistory() {
+  const container = document.getElementById('charHistory');
+  container.innerHTML = '';
+  history.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'char-history-item';
+    div.textContent = c;
+    div.onclick = () => {
+      document.getElementById('charInput').value = c;
+      loadChar();
+    };
+    container.appendChild(div);
+  });
+}
+
+function showStrokeBreakdown(data) {
+  if (!data || !data.strokes) return;
+  const grid = document.getElementById('strokesGrid');
+  grid.innerHTML = '';
+  document.getElementById('strokeList').style.display = 'block';
+
+  const strokes = data.strokes;
+  // Make Me a Hanzi uses 1024x1024 coordinate space
+  const ORIG_SIZE = 1024;
+  const MINI_SIZE = 60;
+  const PAD = 4;
+  const DRAW_SIZE = MINI_SIZE - PAD * 2;
+  const SCALE = DRAW_SIZE / ORIG_SIZE;
+
+  strokes.forEach((strokePath, i) => {
+    const item = document.createElement('div');
+    item.className = 'stroke-item';
+    item.id = 'stroke-item-' + i;
+
+    const num = document.createElement('div');
+    num.className = 'stroke-num';
+    num.textContent = '第' + (i + 1) + '笔';
+    item.appendChild(num);
+
+    // Build SVG showing all strokes up to this point
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + MINI_SIZE + ' ' + MINI_SIZE);
+    svg.style.cssText = 'width:60px;height:60px;border:2px solid #e0c9a8;border-radius:4px;background:#fff;display:block;';
+
+    // Mini grid lines
+    svg.innerHTML =
+      '<line x1="30" y1="0" x2="30" y2="60" stroke="#e0c9a8" stroke-width="0.5" stroke-dasharray="3,2"/>'
+      + '<line x1="0" y1="30" x2="60" y2="30" stroke="#e0c9a8" stroke-width="0.5" stroke-dasharray="3,2"/>';
+
+    // Draw strokes 0..i, current stroke in red, previous in black
+    // Raw paths use Y-up coords; flip Y to match SVG's Y-down
+    for (let s = 0; s <= i; s++) {
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', strokes[s]);
+      path.setAttribute('transform',
+        'translate(' + PAD + ',' + PAD + ') scale(' + SCALE + ') translate(0,' + ORIG_SIZE + ') scale(1,-1)');
+      path.setAttribute('fill', s === i ? '#c0392b' : '#2c2c2c');
+      svg.appendChild(path);
+    }
+
+    item.appendChild(svg);
+    grid.appendChild(item);
+  });
+
+  document.getElementById('strokeInfo').innerHTML =
+    '共 <span>' + strokes.length + '</span> 笔';
+}
+
+function animateStrokeOrder() {
+  if (!mainWriter || !strokeData) return;
+  isAnimating = true;
+  const totalStrokes = strokeData.strokes.length;
+  let currentStroke = 0;
+
+  // Reset first
+  mainWriter.hideCharacter({ duration: 0 });
+  mainWriter.showOutline({ duration: 0 });
+
+  function animateNext() {
+    if (!isAnimating || currentStroke >= totalStrokes) {
+      isAnimating = false;
+      return;
+    }
+
+    // Highlight current stroke item
+    document.querySelectorAll('.stroke-item').forEach(el => el.classList.remove('active'));
+    const item = document.getElementById('stroke-item-' + currentStroke);
+    if (item) item.classList.add('active');
+
+    document.getElementById('strokeInfo').innerHTML =
+      '正在书写第 <span>' + (currentStroke + 1) + '</span> / <span>' + totalStrokes + '</span> 笔';
+
+    mainWriter.animateStroke(currentStroke, {
+      onComplete: () => {
+        currentStroke++;
+        setTimeout(animateNext, Math.round(300 / getSpeed()));
+      }
+    });
+  }
+
+  animateNext();
+}
+
+function animateFull() {
+  if (!mainWriter) return;
+  isAnimating = true;
+  mainWriter.hideCharacter({ duration: 0 });
+  mainWriter.showOutline({ duration: 0 });
+  document.getElementById('strokeInfo').innerHTML = '连续播放中…';
+
+  mainWriter.animateCharacter({
+    onComplete: () => {
+      isAnimating = false;
+      document.getElementById('strokeInfo').innerHTML = '书写完成';
+    }
+  });
+}
+
+function quizMode() {
+  if (!mainWriter) return;
+  isAnimating = false;
+  mainWriter.hideCharacter({ duration: 300 });
+  mainWriter.showOutline({ duration: 300 });
+  document.getElementById('strokeInfo').innerHTML =
+    '临摹模式：请在字格中按笔顺书写';
+
+  mainWriter.quiz({
+    onComplete: (summary) => {
+      document.getElementById('strokeInfo').innerHTML =
+        '完成！总笔数 <span>' + summary.totalMistakes + '</span> 处失误';
+    },
+    onCorrectStroke: (data) => {
+      document.getElementById('strokeInfo').innerHTML =
+        '第 <span>' + (data.strokeNum + 1) + '</span> 笔正确！';
+    },
+    onMistake: (data) => {
+      document.getElementById('strokeInfo').innerHTML =
+        '第 <span>' + (data.strokeNum + 1) + '</span> 笔有误，已失误 <span>' + data.mistakesOnStroke + '</span> 次';
+    }
+  });
+}
+
+function resetWriter() {
+  if (!mainWriter) return;
+  isAnimating = false;
+  mainWriter.showCharacter({ duration: 300 });
+  mainWriter.showOutline({ duration: 300 });
+  document.querySelectorAll('.stroke-item').forEach(el => el.classList.remove('active'));
+  if (strokeData) {
+    document.getElementById('strokeInfo').innerHTML =
+      '共 <span>' + strokeData.strokes.length + '</span> 笔';
+  }
+}
+
+// Enter key support
+document.getElementById('charInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') loadChar();
+});
+
+// Auto-load on input if single Chinese character
+document.getElementById('charInput').addEventListener('input', (e) => {
+  const val = e.target.value.trim();
+  if (val.length === 1 && /[\u4e00-\u9fff]/.test(val)) {
+    loadChar();
+  }
+});
+
+// Register Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').then(reg => {
+    console.log('Service Worker registered', reg.scope);
+  }).catch(err => {
+    console.log('Service Worker registration failed', err);
+  });
+}
+</script>
+
+</body>
+</html>
