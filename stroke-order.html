@@ -443,6 +443,128 @@
   .fav-toggle:hover { transform: scale(1.15); }
   .fav-toggle.active { color: #e67e22; }
 
+  /* Oracle bone script - 形象记忆 */
+  .oracle-card {
+    margin-top: 12px;
+    background: #faf6ef;
+    border: 2px solid #b8976a;
+    border-radius: 12px;
+    padding: 12px 16px;
+    width: 300px;
+    display: none;
+  }
+
+  .oracle-card.show { display: block; }
+
+  .oracle-title {
+    font-size: 13px;
+    color: #8b5e3c;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: 1px;
+  }
+
+  .oracle-title .oracle-icon {
+    font-size: 16px;
+  }
+
+  .oracle-compare {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .oracle-side {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .oracle-label {
+    font-size: 11px;
+    color: #999;
+  }
+
+  .oracle-img-wrap {
+    width: 100px;
+    height: 100px;
+    border: 2px solid #d4a574;
+    border-radius: 8px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .oracle-img-wrap img {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+    filter: contrast(1.1);
+  }
+
+  .oracle-char {
+    width: 100px;
+    height: 100px;
+    border: 2px solid #d4a574;
+    border-radius: 8px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 60px;
+    color: #2c2c2c;
+  }
+
+  .oracle-arrow {
+    font-size: 24px;
+    color: #b8976a;
+  }
+
+  .oracle-extra {
+    margin-top: 8px;
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .oracle-extra-item {
+    width: 52px;
+    height: 52px;
+    border: 1.5px solid #d4a574;
+    border-radius: 6px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.15s;
+  }
+
+  .oracle-extra-item:hover { border-color: #c0392b; transform: scale(1.08); }
+
+  .oracle-extra-item img {
+    max-width: 88%;
+    max-height: 88%;
+    object-fit: contain;
+    filter: contrast(1.1);
+  }
+
+  .oracle-hint {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #999;
+    text-align: center;
+    font-style: italic;
+  }
+
   footer {
     margin-top: auto;
     padding: 16px;
@@ -492,6 +614,12 @@
 
     .char-section { padding: 0 8px; }
     .char-item { width: 38px; height: 38px; font-size: 20px; }
+
+    .oracle-card { width: min(280px, calc(100vw - 48px)); padding: 10px 12px; }
+    .oracle-img-wrap { width: 80px; height: 80px; }
+    .oracle-char { width: 80px; height: 80px; font-size: 48px; }
+    .oracle-compare { gap: 10px; }
+    .oracle-extra-item { width: 44px; height: 44px; }
   }
 
   .writer-wrapper, .btn, .char-item, .stroke-item {
@@ -517,6 +645,12 @@
     <div class="pinyin-card" id="pinyinCard">
       <div class="pinyin-full" id="pinyinFull"></div>
       <div class="pinyin-parts" id="pinyinParts"></div>
+    </div>
+    <div class="oracle-card" id="oracleCard">
+      <div class="oracle-title"><span class="oracle-icon">📜</span>形象记忆 · 甲骨文</div>
+      <div class="oracle-compare" id="oracleCompare"></div>
+      <div class="oracle-extra" id="oracleExtra"></div>
+      <div class="oracle-hint" id="oracleHint"></div>
     </div>
     <div class="writer-wrapper" id="writerWrapper">
       <svg class="main-svg" id="mainSvg" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
@@ -572,7 +706,7 @@
     <div class="char-list" id="historyList"></div>
   </div>
 
-<footer>笔顺数据来源：hanzi-writer / Make Me a Hanzi</footer>
+<footer>笔顺数据：hanzi-writer / Make Me a Hanzi · 甲骨文：Chinese-Traditional-Culture/JiaGuWen</footer>
 
 <script>
 const SIZE = 300;
@@ -603,6 +737,67 @@ function saveToStorage(key, data) {
 
 let historyList = loadFromStorage(STORAGE_HISTORY);
 let favList = loadFromStorage(STORAGE_FAVS);
+
+// Oracle bone script data
+const JIAGUWEN_BASE = 'https://raw.githubusercontent.com/Chinese-Traditional-Culture/JiaGuWen/master/';
+let oracleMap = null;
+
+function loadOracleData() {
+  if (oracleMap) return Promise.resolve(oracleMap);
+  return fetch(JIAGUWEN_BASE + 'index.json')
+    .then(r => r.json())
+    .then(data => {
+      oracleMap = {};
+      data.forEach(item => {
+        if (!oracleMap[item.name]) oracleMap[item.name] = [];
+        oracleMap[item.name].push(JIAGUWEN_BASE + 'i/' + item.image);
+      });
+      return oracleMap;
+    })
+    .catch(() => { oracleMap = {}; return oracleMap; });
+}
+
+function showOracleCard(char) {
+  const card = document.getElementById('oracleCard');
+  loadOracleData().then(map => {
+    const images = map[char];
+    if (!images || images.length === 0) {
+      card.classList.remove('show');
+      return;
+    }
+    const mainImg = images[0];
+    const compare = document.getElementById('oracleCompare');
+    compare.innerHTML =
+      '<div class="oracle-side">'
+      + '<div class="oracle-label">甲骨文</div>'
+      + '<div class="oracle-img-wrap"><img src="' + mainImg + '" alt="甲骨文"/></div>'
+      + '</div>'
+      + '<div class="oracle-arrow">→</div>'
+      + '<div class="oracle-side">'
+      + '<div class="oracle-label">今文</div>'
+      + '<div class="oracle-char">' + char + '</div>'
+      + '</div>';
+
+    const extra = document.getElementById('oracleExtra');
+    extra.innerHTML = '';
+    if (images.length > 1) {
+      images.slice(1).forEach(url => {
+        const item = document.createElement('div');
+        item.className = 'oracle-extra-item';
+        item.innerHTML = '<img src="' + url + '" alt="甲骨文"/>';
+        item.onclick = () => {
+          compare.querySelector('.oracle-img-wrap img').src = url;
+        };
+        extra.appendChild(item);
+      });
+    }
+
+    const hint = document.getElementById('oracleHint');
+    hint.textContent = images.length > 1 ? '点击下方异体切换甲骨文写法' : '观察甲骨文，联想字形来源';
+
+    card.classList.add('show');
+  });
+}
 
 function setSpeed(speed, btn) {
   playSpeed = speed;
@@ -739,6 +934,7 @@ function loadChar() {
 
   document.getElementById('mainPlaceholder').style.display = 'none';
   showPinyinCard(char);
+  showOracleCard(char);
   clearMainSvg();
   updateStepDisplay();
   document.getElementById('strokeBreakdown').style.display = 'none';
